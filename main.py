@@ -3,39 +3,44 @@ import os
 import sqlite3
 
 
+# trida, ktera zpravuje databazi
 class Databaze():
-    # trida, ktera zpravuje databazi
 
+    # funkce, která načítá databázi seznam_pojistenych a kdyz ji nenajde tak jí vytvoří
     def __init__(self):
         self.conn = sqlite3.connect("seznam_pojistenych.db")
         self.cur = self.conn.cursor()
 
+        # struktura databáze
         self.cur.execute('''CREATE TABLE IF NOT EXISTS seznam_pojistenych (
         id INTEGER PRIMARY KEY,
-        jmeno_prijemni TEXT,
+        jmeno TEXT,
         prijmeni TEXT,
-        vek REAL,
-        telefonni_cislo REAL)''')
+        vek TEXT,
+        telefonni_cislo TEXT)''')
         self.conn.commit()
 
-    def pridani_jmena(self, jmeno):
-        # vlozi jmena a prijmeni do seznamu
-        self.cur.execute("INSERT INTO seznam_pojistenych (jmeno_prijmeni) VALUES (?)", (jmeno,))
+    # funkce, která přidá nového pojištěnného do databáze
+    def pridani_pojistence(self, jmeno, prijmeni, vek, cislo):
+        # přidá nového pojištěnce do seznamu
+        self.cur.execute("""
+        INSERT INTO seznam_pojistenych (jmeno, prijmeni, vek, telefonni_cislo)
+        VALUES (?, ?, ?, ?)""", (jmeno, prijmeni, vek, cislo))
         self.conn.commit()
 
-    def pridani_vek(self, vek):
-        # vlozi vek do seznamu
-        self.cur.execute("INSERT INTO seznam_pojistenych (vek) VALUES (?)", (vek,))
-        self.conn.commit()
-
-    def pridani_telefoni_cislo(self, cislo):
-        # vlozi telefoni cislo do seznamu
-        self.cur.execute("INSERT INTO seznam_pojistenych (telefonni_cislo) VALUES (?)", (cislo,))
-        self.conn.commit()
-
+    # funkce, která vypíše celou databázi
     def vypis(self):
-        return self.seznam_pojistenych
+        self.cur.execute("SELECT * FROM seznam_pojistenych")
+        zaznamy = self.cur.fetchall()
+        return zaznamy
 
+    # funkce, která vyhledá v databázi pojištěnce podle jména a příjmení
+    def vyhledani_pojistence(self, jmeno, prijmeni):
+        self.cur.execute("SELECT * FROM seznam_pojistenych WHERE jmeno = ? AND prijmeni = ?", (jmeno, prijmeni))
+        zaznamy = self.cur.fetchall()
+        return zaznamy
+
+    # funkce, ukončí spojení s databází
     def close(self):
         self.conn.close()
 
@@ -43,15 +48,15 @@ class Databaze():
         return f"Třida pro ukládání a výpis databáze pojištěných"
 
 
+# hlavni trida aplikace, ktera komunikuje s uzivatelem a obsahuje v sobě rozdělovacé logiku
 class Komunikator:
-    # hlavni trida aplikace, ktera komunikuje s uzivatelem a ma v sobe logiku
 
     def __init__(self):
         self.volba = None
         self.databaze = Databaze()  # inicializuje tridu databaze
 
+    # vypis hlavniho menu a prijmuti volby uzivatele do promenne volba
     def menu(self):
-        # vypis hlavniho menu a prijmuti volby uzivatele do promenne volba
 
         print("""-------------------------
 EVIDENCE POJIŠTĚNÝCH
@@ -59,7 +64,7 @@ EVIDENCE POJIŠTĚNÝCH
 
 Vyberte si akci:
 1 - přidat nového pojištěného
-2 - Vypsat všechny pojištěné
+2 - vypsat všechny pojištěné
 3 - vyhledat pojištěného
 4 - ukončit program""")
 
@@ -67,8 +72,8 @@ Vyberte si akci:
         print("")
         self.rozdelovaci_logika()  # spousti funcki ktera vybira,kterou funkci spustit na zaklade volby uzivatele
 
+    # funkce, která spouští jednotlivé funkce podle volby v menu
     def rozdelovaci_logika(self):
-        # sousti jednotlive funckce v tride podle volby v menu
 
         if self.volba == "1":
             self.pridani_pojistence()
@@ -77,132 +82,127 @@ Vyberte si akci:
             self.vypsani_pojistenych()
 
         elif self.volba == "3":
-            self.vyhledani_poijisteneho()
+            self.vyhledani_pojisteneho()
 
         elif self.volba == "4":
+            self.databaze.close()
             exit()
 
         else:
-            print("Toto volbu neznánm, zvolte znovu prosím")
+            print("Toto volbu neznám, zvolte znovu prosím")
             time.sleep(2)
-            os.system("clear")
-            self.menu()
+            self.smycka()
 
-    def pridani_pojistence(self):
-        """" tato funkce ziskava informace o novem pojistenci od uzovatele a vyvolava prislusne funkce
-        z tridy Databaze, ktera je zapisuje do slovniku seznamu"""
-
-        self.jmeno_prijmeni_funkce("pridani pojistence")  # spusti funkci ktera zpracovava jmeno a prijmeni
-
-        self.databaze.pridani_jmena(
-            self.jmeno_prijmeni)  # prida promenou jmeno prijmeni funnkci pro zapis jmena z tridy databze
-
-        print("Zadejte věk pojištěného")
-        try:
-            vek = int(input())
-        except:
-            print("Věk musí být číslo")
-            print()
-            self.pridani_pojistence()
-
-        self.databaze.pridani_vek(vek)  # prida promenou vek funnkci pro zapis veku z tridy databze
-
-        print("Zadejte telefoní číslo pojištěného")
-        try:
-            cislo = int(input())
-        except:
-            print("Telefonní číslo musí být číslo")
-            print()
-            self.pridani_pojistence()
-
-        self.databaze.pridani_telefoni_cislo(
-            cislo)  # prida promenou cislo prijmeni funnkci pro zapis cisla z tridy databze
-
-        print("Data byla uložena")
+    # funkce, která se spustí v okamžiku, kdy proměná která má být INT není uživatelem zadaná jako INT
+    def kontrola_cisla(self, neni_cislo):
+        print(f"{neni_cislo} musí být číslo")
         print()
-        self.smycka()
 
-    def kontorla_vyplneni(self, promenna, navratova_fce):
-        # funkce která kontroluje vyplneni promenne
-
-        if promenna.isalpha():
-            pass
+        if neni_cislo == "Věk":
+            self.zadani_vek()
 
         else:
-            print("Zadaná hodnota je chybně, zadej jí prosím znovu")
-            print()
-            time.sleep(1)
+            self.zadani_cislo()
 
-            if navratova_fce == "pridani pojistence":
-                self.pridani_pojistence()
-            else:
-                self.jmeno_prijmeni_funkce()
+    # funkce, která řídí přidání nového pojištěnce
+    def pridani_pojistence(self):
+        """" tato funkce ziskava informace o novem pojistenci od uzovatele a vyvolava prislusnou funkci
+        z tridy Databaze, ktera je zapisuje do slovniku seznamu"""
 
-    def jmeno_prijmeni_funkce(self, navratova_fce=None):
-        # funkce prijima od uzivatele jmeno a prijmeni a slucuje je do jedne promenne jmeno_prijmeni
-        print("Zadejte jméno pojištěného")
-        jmeno = input()
+        self.jmeno_prijmeni_funkce()  # spusti funkci ktera zpracovava jmeno a prijmeni
+        self.zadani_vek()
 
-        self.kontorla_vyplneni(jmeno, navratova_fce)  # spusti funkci na kontrolu vyplneni
+    # funkce na zadání věku pojištěnce
+    def zadani_vek(self):
+        print("Zadejte věk pojištěného")
 
-        print("Zadejte příjmení pojištěného")
-        prijmeni = input()
-
-        self.kontorla_vyplneni(prijmeni, navratova_fce)  # spusti funkci na kontrolu vyplneni
-
-        self.jmeno_prijmeni = jmeno + " " + prijmeni
-
-    def vypsani_pojistenych(self, index=None):
-        """ funkce ktera iteruje pres jednotlive seznamy ve slovniku a vypisuje je. Pokud je pri folani funkce zadana
-        hodnota indexu vypise funkce pouze tuto polozky ze vsech seznamu ve slovniku"""
-
-        self.prijmuti_databaze()
-
-        if index is None:  # pokud neni zadan index urcuje rozmezi iterace pocet polozek ve slovniku
-            od = 0
-            do = self.pocet_pojistenych
-
-        else:  # pokud je zadany index pri volani funkce zada rozmezi itarace pouze pro tento index
-            od = index
-            do = index + 1
-
-        for pojistenec in range(od, do):  # itera pres polozky ve slovnicich
-            print(self.seznam_pojistenych["jmeno"][pojistenec] + " ", end="")
-            print(self.seznam_pojistenych["vek"][pojistenec] + " ", end="")
-            print(self.seznam_pojistenych["telefoni cislo"][pojistenec])
-
-        self.smycka()
-
-    def prijmuti_databaze(self):
-        # funkce, ktera nacita databazi ze tridy databze a pocita, kolik polozek je v seznamu "jmeno" a tudiz celkem
-        self.seznam_pojistenych = self.databaze.vypis()
-        self.pocet_pojistenych = len(self.seznam_pojistenych["jmeno"])
-
-    def vyhledani_poijisteneho(self):
-        # funkce ktera zkousi zda je zadane jmeno a prijmeni uz v databazi obsazeno a zjistuje na ktere pozici je v seznamu "jmeno"
-
-        self.jmeno_prijmeni_funkce()
-        self.prijmuti_databaze()
-
-        try:
-            pozice_v_seznamu = self.seznam_pojistenych["jmeno"].index(self.jmeno_prijmeni)
-            self.vypsani_pojistenych(pozice_v_seznamu)
+        try:  # zkouší zda uživatel zadá číslo
+            self.vek = int(input())
+            self.zadani_cislo()  # spustí funkci na zadání telefonního čísla
         except:
-            print("Zadané jméno není v seznamu")
+            self.kontrola_cisla("Věk")
 
+    # funkce na zadání telefonního čísla pojištěnce
+    def zadani_cislo(self):
+        print("Zadejte telefonní číslo pojištěného")
+        cislo = input().strip()  # načteme jako string a odstraníme bílé znaky
+
+        if cislo.isdigit():  # zkontrolujeme, zda jsou tam jen číslice
+            if len(cislo) >= 9:  # minimálně 9 číslic
+                self.cislo = cislo
+                self.databaze.pridani_pojistence(self.jmeno, self.prijmeni, self.vek, self.cislo)
+                print(f"Zadávám {self.jmeno} {self.prijmeni} {self.vek} {self.cislo}")
+                print("Data byla uložena\n")
+                self.smycka()
+            else:
+                print("Číslo je příliš krátké\n")
+                self.zadani_cislo()
+        else:
+            print("Telefonní číslo musí obsahovat pouze číslice\n")
+            self.zadani_cislo()
+
+    # funkce která přijímá od uživatele jméno a příjmení
+    def jmeno_prijmeni_funkce(self):
+        while True:
+            print("Zadejte jméno pojištěného")
+            self.jmeno = input().strip()
+            if self.jmeno.isalpha():
+                break
+            else:
+                print("Zadané jméno je chybné, zadejte prosím znovu\n")
+                time.sleep(1)
+
+        while True:
+            print("Zadejte příjmení pojištěného")
+            self.prijmeni = input().strip()
+            if self.prijmeni.isalpha():
+                break
+            else:
+                print("Zadané příjmení je chybné, zadejte prosím znovu\n")
+                time.sleep(1)
+
+    # funkce pro výpis všech pojištěných v databázi
+    def vypsani_pojistenych(self):
+        self.vypis = None
+        self.vypis = self.databaze.vypis()
+
+        self.vypis_seznamu("Databáze neobsahuje žádné pojištěnce")
+
+    # funkce pro vyhledání pojištěnce v databázi
+    def vyhledani_pojisteneho(self):
+        self.vypis = None
+
+        self.jmeno_prijmeni_funkce()  # odkaz na funkci, která si od užvatele nechá zadat jméno a příjmení pojištěnce
+        self.vypis = self.databaze.vyhledani_pojistence(self.jmeno, self.prijmeni)
+
+        self.vypis_seznamu("Zadaný pojištěnec není v databázi")
+
+    # funkce na výpis zápisů z databáze
+    def vypis_seznamu(self, navratova_veta):
+        if not self.vypis:  # pokud je seznam prázdný
+            print(navratova_veta)
+            print()
+        else:
+            for zaznam in self.vypis:
+                print(f"{zaznam[1]} {zaznam[2]} {zaznam[3]} {zaznam[4]}")
         self.smycka()
 
+    # čeká na pokyn od uživatele a znovu spustí hlavní menu
     def smycka(self):
-        # ceka na pokyn od uzivatele a znovu spusti funkci hlavniho menu
         print("Pokračujte stisknutím klávesy Enter")
         pokracovani = input()
 
-        os.system("clear")
+        if os.name == "nt":
+            os.system('cls')  # smaže obrazovku pro windows
+        else:
+            os.system("clear")  # smaže obrazovku pro mac a linux
+
         self.menu()
 
     def __str__(self):
         return f"Třída uživatelského rozhraní"
 
 
+# inicializace třídy Komunikator
 kom = Komunikator()
 kom.menu()
