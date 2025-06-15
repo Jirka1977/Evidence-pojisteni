@@ -95,7 +95,7 @@ Vyberte si akci:
 
     # funkce, která se spustí v okamžiku, kdy proměná která má být INT není uživatelem zadaná jako INT
     def kontrola_cisla(self, neni_cislo):
-        print(f"{neni_cislo} musí být číslo")
+        print(f"{neni_cislo} musí mít platný formát")
         print()
 
         if neni_cislo == "Věk":
@@ -119,7 +119,14 @@ Vyberte si akci:
         self.vek = input().strip()  # načteme jako string a odstraníme bílé znak
 
         if self.vek.isdigit():  # zkontrolujeme, zda jsou tam jen číslice
-            self.zadani_cislo()  # spustí funkci na zadání telefonního čísla
+
+            self.vek = int(self.vek) # string prevede na int
+
+            if 0 < self.vek < 130: # kontrola hodnoty veku
+                self.zadani_cislo()  # spustí funkci na zadání telefonního čísla
+
+            else:
+                self.kontrola_cisla("Věk")
 
         else:
             self.kontrola_cisla("Věk")
