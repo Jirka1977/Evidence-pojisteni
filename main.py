@@ -21,11 +21,11 @@ class Databaze():
         self.conn.commit()
 
     # funkce, která přidá nového pojištěnného do databáze
-    def pridani_pojistence(self, jmeno, prijmeni, vek, cislo):
+    def pridani_pojistence(self, jmeno, prijmeni, vek, telefonni_cislo):
         # přidá nového pojištěnce do seznamu
         self.cur.execute("""
         INSERT INTO seznam_pojistenych (jmeno, prijmeni, vek, telefonni_cislo)
-        VALUES (?, ?, ?, ?)""", (jmeno, prijmeni, vek, cislo))
+        VALUES (?, ?, ?, ?)""", (jmeno, prijmeni, vek, telefonni_cislo))
         self.conn.commit()
 
     # funkce, která vypíše celou databázi
@@ -116,26 +116,28 @@ Vyberte si akci:
     def zadani_vek(self):
         print("Zadejte věk pojištěného")
 
-        try:  # zkouší zda uživatel zadá číslo
-            self.vek = int(input())
+        self.vek = input().strip()  # načteme jako string a odstraníme bílé znak
+
+        if self.vek.isdigit():  # zkontrolujeme, zda jsou tam jen číslice
             self.zadani_cislo()  # spustí funkci na zadání telefonního čísla
-        except:
+
+        else:
             self.kontrola_cisla("Věk")
 
     # funkce na zadání telefonního čísla pojištěnce
     def zadani_cislo(self):
         print("Zadejte telefonní číslo pojištěného")
-        cislo = input().strip()  # načteme jako string a odstraníme bílé znaky
+        telefonni_cislo = input().strip()  # načteme jako string a odstraníme bílé znaky
 
-        if cislo.isdigit():  # zkontrolujeme, zda jsou tam jen číslice
-            if len(cislo) >= 9:  # minimálně 9 číslic
-                self.cislo = cislo
-                self.databaze.pridani_pojistence(self.jmeno, self.prijmeni, self.vek, self.cislo)
-                print(f"Zadávám {self.jmeno} {self.prijmeni} {self.vek} {self.cislo}")
+        if telefonni_cislo.isdigit():  # zkontrolujeme, zda jsou tam jen číslice
+            if len(telefonni_cislo) == 9:  # minimálně 9 číslic
+                self.telefonni_cislo = telefonni_cislo
+                self.databaze.pridani_pojistence(self.jmeno, self.prijmeni, self.vek, self.telefonni_cislo)
+                print(f"Zadávám {self.jmeno} {self.prijmeni} {self.vek} {self.telefonni_cislo}")
                 print("Data byla uložena\n")
                 self.smycka()
             else:
-                print("Číslo je příliš krátké\n")
+                print("Číslo je příliš krátké nebo dlouhé\n")
                 self.zadani_cislo()
         else:
             print("Telefonní číslo musí obsahovat pouze číslice\n")
